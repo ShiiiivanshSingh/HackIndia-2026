@@ -73,6 +73,9 @@ export function AppProvider({ children }) {
 
     async function bootstrapAuth() {
       setError(null)
+      const { data: sessionData } = await supabase.auth.getSession()
+      const session = sessionData?.session ?? null
+      setAuthUser(session?.user ?? null)
       const { data } = await supabase.auth.getUser()
       if (!mounted) return
       setAuthUser(data?.user ?? null)

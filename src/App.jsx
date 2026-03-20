@@ -67,17 +67,17 @@ function AppInner() {
           }}
         />
       ) : null}
-      {route === 'signin' ? (
-        <SignInPage
-          initialMode={localStorage.getItem('geoserve_ui_mode') || 'collector'}
-          onBack={() => setRoute('landing')}
-        />
-      ) : null}
-      {route === 'donor' ? (
-        <DonateWizard onDone={() => setRoute('landing')} />
-      ) : null}
-      {route === 'collector' ? <CollectorDashboard onTrack={() => setRoute('driver')} /> : null}
-      {route === 'driver' ? <PickupTracking onBack={() => setRoute('collector')} /> : null}
+      <div className={user ? 'pt-20' : ''}>
+        {route === 'signin' ? (
+          <SignInPage
+            initialMode={localStorage.getItem('geoserve_ui_mode') || 'collector'}
+            onBack={() => setRoute('landing')}
+          />
+        ) : null}
+        {route === 'donor' ? <DonateWizard onDone={() => setRoute('landing')} /> : null}
+        {route === 'collector' ? <CollectorDashboard onTrack={() => setRoute('driver')} /> : null}
+        {route === 'driver' ? <PickupTracking onBack={() => setRoute('collector')} /> : null}
+      </div>
     </div>
   )
 }

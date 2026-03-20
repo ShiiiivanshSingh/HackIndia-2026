@@ -32,7 +32,7 @@ export default function NotificationsWidget() {
   if (!user) return null
 
   return (
-    <div className="fixed top-3 right-3 z-50">
+    <div className="fixed top-20 right-3 z-50">
       <div className="flex items-center gap-2">
         <button
           type="button"
