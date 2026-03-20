@@ -3,7 +3,7 @@ import Button from '../ui/Button.jsx'
 import Card from '../ui/Card.jsx'
 import Badge from '../ui/Badge.jsx'
 import { useAppContext } from '../context/AppContext.jsx'
-export default function LandingPage({ onDonate, onCollect, onDriver }) {
+export default function LandingPage({ onDonate, onCollect, onDriver, onSignIn }) {
   const { user, trustScore, listings, signOut } = useAppContext()
   const mealsSaved = listings.filter((l) => l.status === 'completed').length * 10
   const activeUsers = 24
@@ -24,7 +24,7 @@ export default function LandingPage({ onDonate, onCollect, onDriver }) {
                 logout
               </Button>
             ) : (
-              <Button variant="ghost" onClick={() => onCollect && onCollect()}>
+              <Button variant="ghost" onClick={() => onSignIn && onSignIn()}>
                 sign in
               </Button>
             )}
