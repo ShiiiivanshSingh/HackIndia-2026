@@ -67,7 +67,7 @@ function AppInner() {
           }}
         />
       ) : null}
-      <div className={user ? 'pt-16' : ''}>
+      <div className={user ? 'pt-20' : ''}>
         {route === 'signin' ? (
           <SignInPage
             initialMode={localStorage.getItem('geoserve_ui_mode') || 'collector'}
