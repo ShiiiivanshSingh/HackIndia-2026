@@ -8,6 +8,8 @@ export default function Badge({ className = '', variant = 'success', children })
         ? 'bg-red-700 text-white'
         : variant === 'warning'
           ? 'bg-orange-600 text-white'
+          : variant === 'neutral'
+            ? 'bg-gray-700 text-white'
           : 'bg-gray-700 text-white'
 
   return <span className={`text-xs px-2 py-1 rounded-full ${styles} ${className}`}>{children}</span>

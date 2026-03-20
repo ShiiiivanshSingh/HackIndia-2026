@@ -12,8 +12,10 @@ export default function Stepper({ steps, activeStep }) {
           <div key={s} className="flex-1">
             <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full ${done ? 'bg-green-500' : active ? 'bg-orange-500' : 'bg-white/20'}`}
-                style={{ width: done ? '100%' : active ? '100%' : '0%' }}
+                className={`h-full rounded-full ${
+                  done ? 'bg-green-500' : active ? 'bg-orange-500' : 'bg-white/20'
+                }`}
+                style={{ width: '100%' }}
               />
             </div>
             <div className="mt-2 flex justify-between items-center">
