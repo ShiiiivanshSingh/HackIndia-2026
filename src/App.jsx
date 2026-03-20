@@ -6,6 +6,7 @@ import CollectorDashboard from './pages/CollectorDashboard.jsx'
 import PickupTracking from './pages/PickupTracking.jsx'
 import SignInPage from './pages/SignInPage.jsx'
 import NotificationsWidget from './components/NotificationsWidget.jsx'
+import AccountBar from './components/AccountBar.jsx'
 
 function ToastLayer() {
   const { error, initialLoading, supabaseClientConfigured } = useAppContext()
@@ -54,8 +55,17 @@ function AppInner() {
     <div>
       <ToastLayer />
       <NotificationsWidget />
+      <AccountBar />
       {route === 'landing' ? (
-        <LandingPage onDonate={() => goToMode('donor')} onCollect={() => goToMode('collector')} onDriver={() => goToMode('driver')} />
+        <LandingPage
+          onDonate={() => goToMode('donor')}
+          onCollect={() => goToMode('collector')}
+          onDriver={() => goToMode('driver')}
+          onSignIn={() => {
+            const uiMode = localStorage.getItem('geoserve_ui_mode') || 'collector'
+            goToMode(uiMode === 'driver' ? 'driver' : uiMode === 'donor' ? 'donor' : 'collector')
+          }}
+        />
       ) : null}
       {route === 'signin' ? (
         <SignInPage
