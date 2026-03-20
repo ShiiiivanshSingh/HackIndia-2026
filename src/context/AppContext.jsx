@@ -402,16 +402,36 @@ export function AppProvider({ children }) {
     await supabase.from('notifications').update({ read_at: new Date().toISOString() }).eq('id', notificationId)
   }
 
-  async function signInWithOtp(email) {
+  async function signUpWithPassword({ email, role, password }) {
     setError(null)
     if (!supabase) throw new Error('supabase not configured')
     if (!email) throw new Error('email required')
+    if (!role) throw new Error('role required')
+    if (!password) throw new Error('password required')
 
-    const { error: signInError } = await supabase.auth.signInWithOtp({
-      email
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { role } }
+    })
+
+    if (signUpError) throw signUpError
+    return data
+  }
+
+  async function signInWithPassword({ email, password }) {
+    setError(null)
+    if (!supabase) throw new Error('supabase not configured')
+    if (!email) throw new Error('email required')
+    if (!password) throw new Error('password required')
+
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password
     })
 
     if (signInError) throw signInError
+    return data
   }
 
   async function signOut() {
@@ -460,7 +480,8 @@ export function AppProvider({ children }) {
       completeListing,
       markNotificationRead,
       profile,
-      signInWithOtp,
+      signUpWithPassword,
+      signInWithPassword,
       signOut,
       submitReview
     }),

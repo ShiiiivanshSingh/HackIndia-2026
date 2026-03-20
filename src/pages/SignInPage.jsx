@@ -17,9 +17,12 @@ function modeToProfileHint(mode) {
 }
 
 export default function SignInPage({ initialMode = 'collector', onBack }) {
-  const { user, signInWithOtp } = useAppContext()
-  const [mode, setMode] = useState(initialMode)
+  const { user, signUpWithPassword, signInWithPassword } = useAppContext()
+  const [authMode, setAuthMode] = useState('signup') // signup: email+role+password+retype, login: email+password
+  const [mode, setMode] = useState(initialMode) // used for signup role + post-login screen routing
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [retypePassword, setRetypePassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState(null)
 
@@ -41,10 +44,22 @@ export default function SignInPage({ initialMode = 'collector', onBack }) {
     setMsg(null)
     if (!email.trim()) return
     try {
-      localStorage.setItem('geoserve_ui_mode', mode)
       setLoading(true)
-      await signInWithOtp(email.trim())
-      setMsg('check your inbox for the sign-in link')
+      if (authMode === 'signup') {
+        if (!password) return
+        if (!retypePassword) return
+        if (password !== retypePassword) {
+          setMsg('passwords do not match')
+          return
+        }
+        localStorage.setItem('geoserve_ui_mode', mode)
+        const result = await signUpWithPassword({ email: email.trim(), role: mode, password })
+        setMsg(result?.session ? 'signed in' : 'account created (check your email to confirm)')
+      } else {
+        if (!password) return
+        await signInWithPassword({ email: email.trim(), password })
+        setMsg('signed in')
+      }
     } catch (err) {
       setMsg(err?.message || 'sign in failed')
     } finally {
@@ -74,33 +89,59 @@ export default function SignInPage({ initialMode = 'collector', onBack }) {
           <div className="lg:col-span-7">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 mb-5">
               <Badge variant="success">secure</Badge>
-              <span className="text-sm text-white/80">magic link authentication</span>
+              <span className="text-sm text-white/80">password authentication</span>
             </div>
 
             <Card className="bg-gray-900/40">
-              <div className="text-xl font-bold">Choose your role</div>
-              <div className="mt-1 text-sm text-white/60">this only changes your screen after login</div>
-
-              <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                {MODES.map((m) => (
-                  <button
-                    key={m.key}
-                    type="button"
-                    onClick={() => setMode(m.key)}
-                    className={`rounded-2xl border p-4 text-left transition ${
-                      mode === m.key ? 'border-green-500/60 bg-green-500/10' : 'border-white/10 bg-white/0 hover:bg-white/5'
-                    }`}
-                  >
-                    <div className="text-sm font-semibold capitalize">{m.label}</div>
-                    <div className="mt-2 text-xs text-white/60">{modeToProfileHint(m.key)}</div>
-                  </button>
-                ))}
+              <div className="flex items-center gap-2 mb-4">
+                <Button
+                  type="button"
+                  variant={authMode === 'signup' ? 'secondary' : 'ghost'}
+                  className="flex-1"
+                  onClick={() => setAuthMode('signup')}
+                >
+                  create account
+                </Button>
+                <Button
+                  type="button"
+                  variant={authMode === 'login' ? 'secondary' : 'ghost'}
+                  className="flex-1"
+                  onClick={() => setAuthMode('login')}
+                >
+                  log in
+                </Button>
               </div>
 
-              <div className="mt-6">
-                <div className="text-sm text-white/60">Then sign in with your email</div>
+              {authMode === 'signup' ? (
+                <>
+                  <div className="text-xl font-bold">Choose your role</div>
+                  <div className="mt-1 text-sm text-white/60">this only changes your screen after login</div>
 
-                <form onSubmit={onSubmit} className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                    {MODES.map((m) => (
+                      <button
+                        key={m.key}
+                        type="button"
+                        onClick={() => setMode(m.key)}
+                        className={`rounded-2xl border p-4 text-left transition ${
+                          mode === m.key ? 'border-green-500/60 bg-green-500/10' : 'border-white/10 bg-white/0 hover:bg-white/5'
+                        }`}
+                      >
+                        <div className="text-sm font-semibold capitalize">{m.label}</div>
+                        <div className="mt-2 text-xs text-white/60">{modeToProfileHint(m.key)}</div>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-xl font-bold">Sign in</div>
+                  <div className="mt-1 text-sm text-white/60">enter your email and password</div>
+                </>
+              )}
+
+              <div className="mt-6">
+                <form onSubmit={onSubmit} className="grid gap-3 sm:grid-cols-2">
                   <label className="grid gap-2 sm:col-span-2">
                     <span className="text-sm text-white/70">email</span>
                     <input
@@ -111,9 +152,33 @@ export default function SignInPage({ initialMode = 'collector', onBack }) {
                     />
                   </label>
 
+                  <label className="grid gap-2">
+                    <span className="text-sm text-white/70">password</span>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="p-3 rounded-lg border border-gray-700 bg-gray-900 text-sm outline-none focus:border-green-500"
+                      placeholder="••••••••"
+                    />
+                  </label>
+
+                  {authMode === 'signup' ? (
+                    <label className="grid gap-2">
+                      <span className="text-sm text-white/70">retype password</span>
+                      <input
+                        type="password"
+                        value={retypePassword}
+                        onChange={(e) => setRetypePassword(e.target.value)}
+                        className="p-3 rounded-lg border border-gray-700 bg-gray-900 text-sm outline-none focus:border-green-500"
+                        placeholder="••••••••"
+                      />
+                    </label>
+                  ) : null}
+
                   <div className="sm:col-span-2 flex items-center gap-3">
-                    <Button type="submit" disabled={loading || !email.trim()} className="flex-1">
-                      {loading ? 'sending...' : 'send sign-in link'}
+                    <Button type="submit" disabled={loading || !email.trim() || !password} className="flex-1">
+                      {loading ? 'working...' : authMode === 'signup' ? 'create account' : 'sign in'}
                     </Button>
                   </div>
                 </form>

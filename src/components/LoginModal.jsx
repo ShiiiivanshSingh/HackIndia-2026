@@ -3,8 +3,9 @@ import { useAppContext } from '../context/AppContext.jsx'
 import Button from '../ui/Button.jsx'
 
 export default function LoginModal({ open, onClose }) {
-  const { user, signInWithOtp } = useAppContext()
+  const { user, signInWithPassword } = useAppContext()
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState(null)
 
@@ -15,8 +16,8 @@ export default function LoginModal({ open, onClose }) {
     setMsg(null)
     setLoading(true)
     try {
-      await signInWithOtp(email.trim())
-      setMsg('check your inbox for the sign-in link')
+      await signInWithPassword({ email: email.trim(), password })
+      setMsg('signed in')
     } catch (err) {
       setMsg(err?.message || 'sign in failed')
     } finally {
@@ -30,7 +31,7 @@ export default function LoginModal({ open, onClose }) {
         <div className="flex items-center justify-between gap-3 mb-3">
           <div>
             <div className="text-lg font-bold">sign in</div>
-            <div className="text-sm text-white/60">magic link via email</div>
+            <div className="text-sm text-white/60">email + password</div>
           </div>
           <button
             type="button"
@@ -54,12 +55,19 @@ export default function LoginModal({ open, onClose }) {
             />
           </label>
 
-          <Button
-            type="submit"
-            disabled={loading || !email.trim()}
-            className="w-full"
-          >
-            {loading ? 'sending...' : 'send sign-in link'}
+          <label className="grid gap-2">
+            <span className="text-sm text-white/70">password</span>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="p-3 rounded-lg border border-gray-700 bg-gray-900 text-sm outline-none focus:border-green-500"
+            />
+          </label>
+
+          <Button type="submit" disabled={loading || !email.trim() || !password} className="w-full">
+            {loading ? 'working...' : 'sign in'}
           </Button>
 
           {msg ? <div className="text-sm text-white/70">{msg}</div> : null}
