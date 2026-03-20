@@ -26,6 +26,10 @@ export default function SignInPage({ initialMode = 'collector', onBack }) {
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState(null)
 
+  // Supabase `profiles.role` check constraint only supports: donor/collector/both.
+  // We still show `driver` for routing, but persist it as `collector` in DB.
+  const dbRole = mode === 'donor' ? 'donor' : 'collector'
+
   if (user) {
     return (
       <div className="min-h-screen bg-gray-950 text-white">
@@ -53,15 +57,16 @@ export default function SignInPage({ initialMode = 'collector', onBack }) {
           return
         }
         localStorage.setItem('geoserve_ui_mode', mode)
-        const result = await signUpWithPassword({ email: email.trim(), role: mode, password })
-        setMsg(result?.session ? 'signed in' : 'account created (check your email to confirm)')
+        const result = await signUpWithPassword({ email: email.trim(), role: dbRole, password })
+        setMsg(result?.session ? 'signed in' : 'account created')
       } else {
         if (!password) return
+        localStorage.setItem('geoserve_ui_mode', mode)
         await signInWithPassword({ email: email.trim(), password })
         setMsg('signed in')
       }
     } catch (err) {
-      setMsg(err?.message || 'sign in failed')
+      setMsg(err?.message || (authMode === 'signup' ? 'sign up failed' : 'sign in failed'))
     } finally {
       setLoading(false)
     }
@@ -112,33 +117,31 @@ export default function SignInPage({ initialMode = 'collector', onBack }) {
                 </Button>
               </div>
 
-              {authMode === 'signup' ? (
-                <>
-                  <div className="text-xl font-bold">Choose your role</div>
-                  <div className="mt-1 text-sm text-white/60">this only changes your screen after login</div>
+              <div className="text-xl font-bold">{authMode === 'signup' ? 'Create account' : 'Sign in'}</div>
+              <div className="mt-1 text-sm text-white/60">
+                {authMode === 'signup' ? 'your role changes your screen after login' : 'enter your email and password'}
+              </div>
 
-                  <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                    {MODES.map((m) => (
-                      <button
-                        key={m.key}
-                        type="button"
-                        onClick={() => setMode(m.key)}
-                        className={`rounded-2xl border p-4 text-left transition ${
-                          mode === m.key ? 'border-green-500/60 bg-green-500/10' : 'border-white/10 bg-white/0 hover:bg-white/5'
-                        }`}
-                      >
-                        <div className="text-sm font-semibold capitalize">{m.label}</div>
-                        <div className="mt-2 text-xs text-white/60">{modeToProfileHint(m.key)}</div>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="text-xl font-bold">Sign in</div>
-                  <div className="mt-1 text-sm text-white/60">enter your email and password</div>
-                </>
-              )}
+              <div className="mt-5">
+                <div className="text-sm text-white/60 mb-3">Choose your role</div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {MODES.map((m) => (
+                    <button
+                      key={m.key}
+                      type="button"
+                      onClick={() => setMode(m.key)}
+                      className={`rounded-2xl border p-4 text-left transition ${
+                        mode === m.key
+                          ? 'border-green-500/60 bg-green-500/10'
+                          : 'border-white/10 bg-white/0 hover:bg-white/5'
+                      }`}
+                    >
+                      <div className="text-sm font-semibold capitalize">{m.label}</div>
+                      <div className="mt-2 text-xs text-white/60">{modeToProfileHint(m.key)}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               <div className="mt-6">
                 <form onSubmit={onSubmit} className="grid gap-3 sm:grid-cols-2">
@@ -177,7 +180,16 @@ export default function SignInPage({ initialMode = 'collector', onBack }) {
                   ) : null}
 
                   <div className="sm:col-span-2 flex items-center gap-3">
-                    <Button type="submit" disabled={loading || !email.trim() || !password} className="flex-1">
+                    <Button
+                      type="submit"
+                      disabled={
+                        loading ||
+                        !email.trim() ||
+                        !password ||
+                        (authMode === 'signup' ? !retypePassword || password !== retypePassword : false)
+                      }
+                      className="flex-1"
+                    >
                       {loading ? 'working...' : authMode === 'signup' ? 'create account' : 'sign in'}
                     </Button>
                   </div>
