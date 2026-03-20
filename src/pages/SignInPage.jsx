@@ -25,10 +25,14 @@ export default function SignInPage({ initialMode = 'collector', onBack }) {
   const [retypePassword, setRetypePassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState(null)
+  const [cooldownUntil, setCooldownUntil] = useState(null) // unix ms; used for Supabase auth rate limiting
 
   // Supabase `profiles.role` check constraint only supports: donor/collector/both.
   // We still show `driver` for routing, but persist it as `collector` in DB.
   const dbRole = mode === 'donor' ? 'donor' : 'collector'
+
+  const cooldownActive = cooldownUntil != null && Date.now() < cooldownUntil
+  const retrySecondsLeft = cooldownActive ? Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000)) : 0
 
   if (user) {
     return (
@@ -45,8 +49,19 @@ export default function SignInPage({ initialMode = 'collector', onBack }) {
 
   async function onSubmit(e) {
     e.preventDefault()
+    if (loading) return
     setMsg(null)
     if (!email.trim()) return
+
+    if (cooldownActive) {
+      setMsg(
+        `Too many attempts. You are being rate limited by Supabase auth. Please try again in ~${retrySecondsLeft}s (until ${new Date(
+          cooldownUntil
+        ).toLocaleTimeString()}). Try a different email while testing.`
+      )
+      return
+    }
+
     try {
       setLoading(true)
       if (authMode === 'signup') {
@@ -66,7 +81,24 @@ export default function SignInPage({ initialMode = 'collector', onBack }) {
         setMsg('signed in')
       }
     } catch (err) {
-      setMsg(err?.message || (authMode === 'signup' ? 'sign up failed' : 'sign in failed'))
+      const status = err?.status || err?.statusCode || err?.response?.status
+      const lowerMsg = String(err?.message || '').toLowerCase()
+      const isRateLimited =
+        status === 429 || lowerMsg.includes('rate limit') || lowerMsg.includes('too many') || lowerMsg.includes('429')
+
+      if (isRateLimited) {
+        // Supabase auth throttling is typically short (tens of seconds).
+        const retryAfterMs = 45000
+        const until = Date.now() + retryAfterMs
+        setCooldownUntil(until)
+        setMsg(
+          `Too many attempts. Supabase is rate limiting auth for this email/IP. Try again in ~${Math.ceil(
+            retryAfterMs / 1000
+          )}s (until ${new Date(until).toLocaleTimeString()}). Avoid repeated retries and use a different email while testing.`
+        )
+      } else {
+        setMsg(err?.message || (authMode === 'signup' ? 'sign up failed' : 'sign in failed'))
+      }
     } finally {
       setLoading(false)
     }
@@ -130,6 +162,7 @@ export default function SignInPage({ initialMode = 'collector', onBack }) {
                       key={m.key}
                       type="button"
                       onClick={() => setMode(m.key)}
+                      disabled={loading || cooldownActive}
                       className={`rounded-2xl border p-4 text-left transition ${
                         mode === m.key
                           ? 'border-green-500/60 bg-green-500/10'
@@ -145,6 +178,12 @@ export default function SignInPage({ initialMode = 'collector', onBack }) {
 
               <div className="mt-6">
                 <form onSubmit={onSubmit} className="grid gap-3 sm:grid-cols-2">
+                  {cooldownActive ? (
+                    <div className="sm:col-span-2 rounded-xl border border-orange-500/30 bg-orange-500/10 p-3 text-sm text-orange-100 mb-2">
+                      Too many attempts. Supabase auth is rate limiting you. Retry in ~{retrySecondsLeft}s (until{' '}
+                      {new Date(cooldownUntil).toLocaleTimeString()}). Use a different email while testing.
+                    </div>
+                  ) : null}
                   <label className="grid gap-2 sm:col-span-2">
                     <span className="text-sm text-white/70">email</span>
                     <input
@@ -187,10 +226,19 @@ export default function SignInPage({ initialMode = 'collector', onBack }) {
                         !email.trim() ||
                         !password ||
                         (authMode === 'signup' ? !retypePassword || password !== retypePassword : false)
+                        || cooldownActive
                       }
                       className="flex-1"
                     >
-                      {loading ? 'working...' : authMode === 'signup' ? 'create account' : 'sign in'}
+                      {loading
+                        ? authMode === 'signup'
+                          ? 'Signing up...'
+                          : 'Signing in...'
+                        : cooldownActive
+                          ? `Retry in ${retrySecondsLeft}s`
+                          : authMode === 'signup'
+                            ? 'Sign up'
+                            : 'Sign in'}
                     </Button>
                   </div>
                 </form>
